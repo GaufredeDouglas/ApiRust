@@ -4,6 +4,8 @@ use rocket_db_pools::Connection;
 use crate::db::PokemonDb;
 use crate::models::Pokemon;
 use sqlx::types::JsonValue;
+use sqlx::postgres::PgRow;
+use sqlx::Row;
 
 #[get("/pokemons?<page>&<per_page>")]
 pub async fn get_pokemons(mut db: Connection<PokemonDb>, page: Option<i64>, per_page: Option<i64>) -> Json<Vec<Pokemon>> {
@@ -26,7 +28,6 @@ pub async fn get_pokemons(mut db: Connection<PokemonDb>, page: Option<i64>, per_
     Json(pokemons)
 }
 
-
 #[get("/pokemons/<id>")]
 pub async fn get_pokemon(mut db: Connection<PokemonDb>, id: i32) -> Option<Json<Pokemon>> {
     let pokemon: Option<Pokemon> = sqlx::query_as(
@@ -40,9 +41,6 @@ pub async fn get_pokemon(mut db: Connection<PokemonDb>, id: i32) -> Option<Json<
 
     pokemon.map(Json)
 }
-
-use sqlx::postgres::PgRow;
-use sqlx::Row;
 
 #[post("/pokemons", data = "<pokemon>")]
 pub async fn create_pokemon(mut db: Connection<PokemonDb>, pokemon: Json<Pokemon>) -> Json<Pokemon> {
@@ -61,8 +59,6 @@ pub async fn create_pokemon(mut db: Connection<PokemonDb>, pokemon: Json<Pokemon
 
     Json(new_pokemon)
 }
-
-
 
 #[put("/pokemons/<id>", data = "<pokemon>")]
 pub async fn update_pokemon(mut db: Connection<PokemonDb>, id: i32, pokemon: Json<Pokemon>) -> Option<Json<Pokemon>> {

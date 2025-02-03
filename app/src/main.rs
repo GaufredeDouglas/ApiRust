@@ -1,6 +1,3 @@
-use rocket::fairing::AdHoc;
-use crate::db::run_migrations;
-
 #[macro_use] extern crate rocket;
 
 mod models;
@@ -20,5 +17,4 @@ async fn rocket() -> _ {
             routes::update_pokemon,
             routes::delete_pokemon
         ])
-        .attach(AdHoc::on_ignite("Database Migrations", run_migrations))
 }
