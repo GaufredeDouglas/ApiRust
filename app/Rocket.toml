@@ -1,0 +1,2 @@
+[default.databases.pokemon_db]
+url = "postgres://postgres:postgres@db:5432/pokemon_db"
