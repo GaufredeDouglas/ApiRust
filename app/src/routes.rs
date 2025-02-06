@@ -192,16 +192,35 @@ pub async fn update_pokemon(mut db: Connection<PokemonDb>, id: i32, pokemon: Jso
     let mut tx = db.begin().await
         .map_err(|e| Custom(Status::InternalServerError, format!("Failed to start transaction: {}", e)))?;
 
-    sqlx::query(
+    let updated_pokemon = sqlx::query_as::<_, Pokemon>(
         r#"
-        UPDATE pokemon_species
-        SET identifier = $1, generation_id = $2, evolves_from_species_id = $3, evolution_chain_id = $4,
-            color_id = $5, shape_id = $6, habitat_id = $7, gender_rate = $8, capture_rate = $9,
-            base_happiness = $10, is_baby = $11, hatch_counter = $12, has_gender_differences = $13,
-            growth_rate_id = $14, forms_switchable = $15, "order" = $16, conquest_order = $17
-        WHERE id = (SELECT species_id FROM pokemon WHERE id = $18)
+        WITH updated_pokemon AS (
+            UPDATE pokemon
+            SET identifier = $1, height = $2, weight = $3, base_experience = $4, "order" = $5, is_default = $6
+            WHERE id = $7
+            RETURNING id, species_id, identifier, height, weight, base_experience, "order", is_default
+        )
+        UPDATE pokemon_species ps
+        SET identifier = $8, generation_id = $9, evolves_from_species_id = $10, evolution_chain_id = $11,
+            color_id = $12, shape_id = $13, habitat_id = $14, gender_rate = $15, capture_rate = $16,
+            base_happiness = $17, is_baby = $18, hatch_counter = $19, has_gender_differences = $20,
+            growth_rate_id = $21, forms_switchable = $22, "order" = $23, conquest_order = $24
+        FROM updated_pokemon up
+        WHERE ps.id = up.species_id
+        RETURNING 
+            up.id, ps.identifier, ps.generation_id, ps.evolves_from_species_id, ps.evolution_chain_id,
+            ps.color_id, ps.shape_id, ps.habitat_id, ps.gender_rate, ps.capture_rate, ps.base_happiness,
+            ps.is_baby, ps.hatch_counter, ps.has_gender_differences, ps.growth_rate_id, ps.forms_switchable,
+            ps.order, ps.conquest_order, up.height, up.weight, up.base_experience, up.is_default
         "#
     )
+    .bind(&pokemon.identifier)
+    .bind(pokemon.height)
+    .bind(pokemon.weight)
+    .bind(pokemon.base_experience)
+    .bind(pokemon.order)
+    .bind(pokemon.is_default)
+    .bind(id)
     .bind(&pokemon.identifier)
     .bind(pokemon.generation_id)
     .bind(pokemon.evolves_from_species_id)
@@ -219,37 +238,6 @@ pub async fn update_pokemon(mut db: Connection<PokemonDb>, id: i32, pokemon: Jso
     .bind(pokemon.forms_switchable)
     .bind(pokemon.order)
     .bind(pokemon.conquest_order)
-    .bind(id)
-    .execute(&mut *tx)
-    .await
-    .map_err(|e| Custom(Status::InternalServerError, format!("Failed to update pokemon species: {}", e)))?;
-
-    let updated_pokemon: Pokemon = sqlx::query_as::<_, Pokemon>(
-        r#"
-        WITH updated_pokemon AS (
-            UPDATE pokemon
-            SET identifier = $1, height = $2, weight = $3, base_experience = $4, "order" = $5, is_default = $6
-            WHERE id = $7
-            RETURNING id, species_id
-        )
-        SELECT 
-            p.id, ps.identifier, ps.generation_id, ps.evolves_from_species_id, ps.evolution_chain_id,
-            ps.color_id, ps.shape_id, ps.habitat_id, ps.gender_rate, ps.capture_rate, ps.base_happiness,
-            ps.is_baby, ps.hatch_counter, ps.has_gender_differences, ps.growth_rate_id, ps.forms_switchable,
-            ps.order, ps.conquest_order, p.height, p.weight, p.base_experience, p.is_default
-        FROM 
-            updated_pokemon p
-        JOIN 
-            pokemon_species ps ON p.species_id = ps.id
-        "#
-    )
-    .bind(&pokemon.identifier)
-    .bind(pokemon.height)
-    .bind(pokemon.weight)
-    .bind(pokemon.base_experience)
-    .bind(pokemon.order)
-    .bind(pokemon.is_default)
-    .bind(id)
     .fetch_one(&mut *tx)
     .await
     .map_err(|e| Custom(Status::NotFound, format!("Failed to update pokemon: {}", e)))?;
@@ -259,6 +247,7 @@ pub async fn update_pokemon(mut db: Connection<PokemonDb>, id: i32, pokemon: Jso
 
     Ok(Json(updated_pokemon))
 }
+
 
 #[delete("/pokemons/<id>")]
 pub async fn delete_pokemon(mut db: Connection<PokemonDb>, id: i32) -> Result<Status, Custom<String>> {

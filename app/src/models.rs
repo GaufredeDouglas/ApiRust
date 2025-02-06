@@ -1,8 +1,7 @@
 use serde::{Serialize, Deserialize};
 use sqlx::FromRow;
 
-// On part du principe que l'on n'effectue les opérations de création / mise à jour / suppression sur la table pokemon uniquement
-// Cette table représente des véritables individus, issus d'une espèce (pokemon_species)
+// On part du principe que l'on n'effectue les opérations de création / mise à jour / suppression sur les tables pokemon et pokemon_species uniquement
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct Pokemon {
