@@ -1,6 +1,9 @@
 use serde::{Serialize, Deserialize};
 use sqlx::FromRow;
 
+// On part du principe que l'on n'effectue les opérations de création / mise à jour / suppression sur la table pokemon uniquement
+// Cette table représente des véritables individus, issus d'une espèce (pokemon_species)
+
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct Pokemon {
     pub id: Option<i32>,
@@ -8,12 +11,9 @@ pub struct Pokemon {
     pub generation_id: i32,
     pub evolves_from_species_id: Option<i32>,
     pub evolution_chain_id: i32,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub color: Option<String>,
-    #[serde(skip_deserializing)]
     pub color_id: Option<i32>,
-    pub shape_id: String,
-    pub habitat_id: i32,
+    pub shape_id: Option<i32>,
+    pub habitat_id: Option<i32>,
     pub gender_rate: i32,
     pub capture_rate: i32,
     pub base_happiness: i32,
