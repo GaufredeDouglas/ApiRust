@@ -254,6 +254,12 @@ pub async fn delete_pokemon(mut db: Connection<PokemonDb>, id: i32) -> Result<St
     let mut tx = db.begin().await
         .map_err(|e| Custom(Status::InternalServerError, format!("Failed to start transaction: {}", e)))?;
 
+    let deleted_rows = sqlx::query("DELETE FROM pokemon_types WHERE id = $1")
+        .bind(id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| Custom(Status::InternalServerError, format!("Failed to delete from pokemon_types table: {}", e)))?;
+
     let species_id: Option<i32> = sqlx::query_scalar("DELETE FROM pokemon WHERE id = $1 RETURNING species_id")
         .bind(id)
         .fetch_optional(&mut *tx)
@@ -261,6 +267,12 @@ pub async fn delete_pokemon(mut db: Connection<PokemonDb>, id: i32) -> Result<St
         .map_err(|e| Custom(Status::InternalServerError, format!("Failed to delete from pokemon table: {}", e)))?;
 
     if let Some(species_id) = species_id {
+        sqlx::query("UPDATE pokemon_species SET evolves_from_species_id = NULL WHERE evolves_from_species_id = $1")
+        .bind(species_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| Custom(Status::InternalServerError, format!("Failed to update dependent pokemon_species: {}", e)))?;
+
         sqlx::query("DELETE FROM pokemon_species WHERE id = $1")
             .bind(species_id)
             .execute(&mut *tx)
